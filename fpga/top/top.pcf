@@ -1,0 +1,40 @@
+# ##############################################################################
+
+# iCEcube PCF
+
+# Version:            2017.08.27940
+
+# File Generated:     May 12 2020 15:15:45
+
+# Family & Device:    iCE40HX1K
+
+# Package:            TQ144
+
+# ##############################################################################
+
+###IOSet List 22
+set_io B85_data[7] 119
+set_io B85_nLMA 62
+set_io B85_nWR 61
+set_io B85_nRD 47
+set_io led_3 97
+set_io B85_data[6] 118
+set_io B85_data[1] 113
+set_io B85_data[5] 117
+set_io B85_ph1_clk 56
+set_io led_1 99
+set_io led_5 95
+set_io rst_button 90 -pullup yes
+set_io uart_rx 9
+set_io B85_data[0] 112
+set_io B85_data[4] 116
+set_io B85_output_oen 45
+set_io B85_output_dir 60
+set_io led_2 98
+set_io B85_data[3] 115
+set_io B85_ph2_clk 48
+set_io clk 21
+set_io uart_tx 8
+set_io B85_data[2] 114
+set_io led_4 96
+

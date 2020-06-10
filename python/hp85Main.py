@@ -46,10 +46,10 @@ def WritePacketAndEcho(pkt0, pkt1):
     serialport.write(wrStr)
     
     time.sleep(0.003)
-    if pkt0 == hdr.PKT_WR_STATUS:
+    if pkt0 == header.PKT_WR_STATUS:
         wrStr = bytearray([header.PKT_RD_STATUS,0x00])
         serialport.write(wrStr)
-    elif pkt0 == hdr.PKT_WR_CONTROL:
+    elif pkt0 == header.PKT_WR_CONTROL:
         wrStr = bytearray([header.PKT_RD_CONTROL,0x00])
         serialport.write(wrStr)
 
@@ -114,12 +114,12 @@ while (keepLooping ==1):
     time.sleep(0.050)  ## gives the prev command time to finish printing before we print the menu
     kbdChoice = printMenu()
     if kbdChoice == 't':  ## clear cartridge bit in status register
-        header.statusRegister = utility.clearRegBit(statusRegister,header.STATUS_CASSETTE_IN_BIT)
-        WritePacketAndEcho(header.PKT_WR_STATUS,statusRegister)
+        header.statusRegister = utility.clearRegBit(header.statusRegister,header.STATUS_CASSETTE_IN_BIT)
+        WritePacketAndEcho(header.PKT_WR_STATUS,header.statusRegister)
         
     if kbdChoice == 'T':  ## set cartridge bit in status register
-        header.statusRegister = utility.setRegBit(statusRegister,header.STATUS_CASSETTE_IN_BIT)
-        WritePacketAndEcho(header.PKT_WR_STATUS,statusRegister)
+        header.statusRegister = utility.setRegBit(header.statusRegister,header.STATUS_CASSETTE_IN_BIT)
+        WritePacketAndEcho(header.PKT_WR_STATUS,header.statusRegister)
 
     if kbdChoice == 'x' or kbdChoice == 'X':
         keepLooping = 0

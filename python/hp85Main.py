@@ -14,47 +14,18 @@ import glob,os
 import hp85Header  as header
 import hp85Utilities  as utility
 import hp85PktDecoder as packet
+import hp85Transport as transport
 
 ## global variables
 kbdChoice = 0
 keepLooping = 1
+serialport = 0
 
 HP85_BAUD_RATE = 115200
 HP85_PORT_NAME = "/dev/tty.usbserial-144101"
 
 ## A bunch of local functions...
-## Open the serial port
-
-def openSerialPort(baudRate,portName):
-    global serialport
     
-##  originalPath = os.getcwd()
-    
-        
-    print("serial port name ="+portName)
-
-    serialport = serial.Serial(portName,baudRate,timeout=0)
-    if(serialport):
-        serialport.flushInput()
-    
-##  os.chdir(originalPath)
-
-    return;
-    
-def WritePacketAndEcho(pkt0, pkt1):
-    wrStr = bytearray([pkt0,pkt1])
-    serialport.write(wrStr)
-    
-    time.sleep(0.003)
-    if pkt0 == header.PKT_WR_STATUS:
-        wrStr = bytearray([header.PKT_RD_STATUS,0x00])
-        serialport.write(wrStr)
-    elif pkt0 == header.PKT_WR_CONTROL:
-        wrStr = bytearray([header.PKT_RD_CONTROL,0x00])
-        serialport.write(wrStr)
-
-    return;
-
 def uartMonitorLoop():
     global keepLooping
     global serialport
@@ -64,7 +35,7 @@ def uartMonitorLoop():
     emptyCycles = 0
     writeLine = ""
     
-    while (keepLooping == 1):
+    while ((keepLooping == 1) and (serialport)):
         byteStr = serialport.read(1)
         if (len(byteStr)>0):
             newPkt[index] = byteStr[0] ## chr(byteStr[0]) ##makeASCII(ch)
@@ -104,22 +75,24 @@ def printMenu():
     return(ch);
 
 ##  PROGRAM MAIN LOOP STARTS HERE
-openSerialPort(HP85_BAUD_RATE,HP85_PORT_NAME)
+serialport = utility.openSerialPort(HP85_BAUD_RATE,HP85_PORT_NAME)
 
 monitor = threading.Thread(target=uartMonitorLoop)
 monitor.daemon = True
 monitor.start()
+
+transport.TapeTransportInit()
 
 while (keepLooping ==1):
     time.sleep(0.050)  ## gives the prev command time to finish printing before we print the menu
     kbdChoice = printMenu()
     if kbdChoice == 't':  ## clear cartridge bit in status register
         header.statusRegister = utility.clearRegBit(header.statusRegister,header.STATUS_CASSETTE_IN_BIT)
-        WritePacketAndEcho(header.PKT_WR_STATUS,header.statusRegister)
+        utility.WritePacketAndEcho(header.PKT_WR_STATUS,header.statusRegister)
         
     if kbdChoice == 'T':  ## set cartridge bit in status register
         header.statusRegister = utility.setRegBit(header.statusRegister,header.STATUS_CASSETTE_IN_BIT)
-        WritePacketAndEcho(header.PKT_WR_STATUS,header.statusRegister)
+        utility.WritePacketAndEcho(header.PKT_WR_STATUS,header.statusRegister)
 
     if kbdChoice == 'x' or kbdChoice == 'X':
         keepLooping = 0

@@ -10,6 +10,7 @@ import serial
 import hp85Header     as header
 import hp85Utilities  as utility
 import hp85PktDecoder as packet
+import hp85Transport as transport
 
 def PrintControlRegister(value):
     prtLine = "Control reg=0x%02x "%value
@@ -68,9 +69,28 @@ def PacketDecoder(cmnd,value):
     if cmnd == header.PKT_RD_CONTROL:
         header.controlRegister = value
         PrintControlRegister(value)
+        
+        temp = (value and 0b00011110) ## mask only the motor control bits
+        
+        if(temp==0x00): ## (
+            transport.TapeTransportSetState(header.TRANSPORT_STATE_OFF,value)
+        elif(temp==0x0E): ## (CONTROL_POWER_UP_BIT | CONTROL_MOTOR_ON_BIT | CONTROL_DIR_FWD_BIT)
+            transport.TapeTransportSetState(header.TRANSPORT_STATE_FWD_SLOW,value)
+        elif(temp==0x1E): ## (CONTROL_POWER_UP_BIT | CONTROL_MOTOR_ON_BIT |CONTROL_FAST_BIT)
+            transport.TapeTransportSetState(header.TRANSPORT_STATE_FWD_FAST,value)
+        if(temp==0x06): ## (CONTROL_POWER_UP_BIT | CONTROL_MOTOR_ON_BIT | (CONTROL_DIR_FWD_BIT))
+            transport.TapeTransportSetState(header.TRANSPORT_STATE_RWD_SLOW,value)
+        elif(temp==0x16): ## (CONTROL_POWER_UP_BIT | CONTROL_MOTOR_ON_BIT |CONTROL_FAST_BIT)
+            transport.TapeTransportSetState(header.TRANSPORT_STATE_RWD_FAST,value)
+
         retValue = 1
     elif cmnd == header.PKT_RD_STATUS:
         header.controlRegister = value
         PrintStatusRegister(value)
         retValue = 1
+    elif cmnd == header.PKT_RD_TACH:
+        header.tachometer = value
+        print("Tachometer set to %d"%value)
+        retValue = 1
+        
     return(retValue)

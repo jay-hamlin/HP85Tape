@@ -37,4 +37,5 @@ set_io clk 21
 set_io uart_tx 8
 set_io B85_data[2] 114
 set_io led_4 96
+set_io J13_test_point 44
 

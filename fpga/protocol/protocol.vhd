@@ -17,8 +17,10 @@ use tape_control.constants.all;
 --    'c',0xnn    --> Write control register. second byte it write value
 --    'D',0x00    --> Read data register.
 --    'd',0xnn    --> Write data register. second byte it write value
---    'X',0x00    --> Read misc. status and error codes. TBD
---    'x',0x00    --> write misc. contorl codes. TBD
+--    'M',0x00    --> Read misc. status and error codes. TBD
+--    'm',0x00    --> write misc. contorl codes. TBD
+--    'T',0x00    --> Read tachometer
+--    't',0x00    --> write tachometer
 --
 --    Read commands will return the same packet but with 0x00 filled in with the register's value.
 --    Also:
@@ -75,6 +77,7 @@ entity protocol_machine is
     
     -- signals to the front end (HP85bus) module
     status_register  : buffer std_logic_vector(7 downto 0);
+    status_reg_was_read : in std_logic;  -- asserts when the status register was read from the HP-85
     control_register  : in std_logic_vector(7 downto 0);
     control_reg_avail : in std_logic;  -- asserts when the control register has been written
     data_register_from  : in std_logic_vector(7 downto 0);
@@ -100,6 +103,7 @@ architecture rtl of protocol_machine is
   signal rx_stop_bit_error : std_logic;
 
   -- Internal registers
+  signal tachometer    : std_logic_vector(7 downto 0);
   signal misc_register : std_logic_vector(7 downto 0);
   signal pkt_byte_0    : std_logic_vector(7 downto 0);
   signal pkt_byte_1    : std_logic_vector(7 downto 0);
@@ -108,17 +112,27 @@ architecture rtl of protocol_machine is
   signal control_reg_serviced : std_logic;
   signal data_reg_serviced    : std_logic;
   signal rx_valid_serviced    : std_logic;
+  signal status_reg_was_serviced   : std_logic;
+
+  -- For counting tachometer periods. 35us
+  constant clock_cycles_per_tach : integer := integer(clock_frequency * real(0.000035));
+  subtype tach_counter_type is integer range 0 to clock_cycles_per_tach - 1;
+  signal tach_counter : tach_counter_type;
+  subtype tach_downcount_type is integer range 0 to 255;
+  signal tach_downcount : tach_downcount_type;
 
   type state_type is (
     IDLE,
-    PKT_RD_STATUS,  --    'A',0x00    --> Read status register.
-    PKT_WR_STATUS,  --    'B',0xnn    --> Write status register. second byte it write value
+    PKT_RD_STATUS,  --    'S',0x00    --> Read status register.
+    PKT_WR_STATUS,  --    's',0xnn    --> Write status register. second byte it write value
     PKT_RD_CONTROL, --    'C',0x00    --> Read control register.
-    PKT_WR_CONTROL, --    'D',0xnn    --> Write control register. second byte it write value
-    PKT_RD_DATA,    --    'E',0x00    --> Read data register.
-    PKT_WR_DATA,    --    'F',0xnn    --> Write data register. second byte it write value
-    PKT_RD_MISC,    --    'G',0x00    --> Read misc. status and error codes. TBD
-    PKT_WR_MISC,    --    'H',0x00    --> write misc. contorl codes. TBD
+    PKT_WR_CONTROL, --    'c',0xnn    --> Write control register. second byte it write value
+    PKT_RD_DATA,    --    'D',0x00    --> Read data register.
+    PKT_WR_DATA,    --    'd',0xnn    --> Write data register. second byte it write value
+    PKT_RD_MISC,    --    'M',0x00    --> Read misc. status and error codes. TBD
+    PKT_WR_MISC,    --    'm',0x00    --> write misc. contorl codes. TBD
+    PKT_RD_TACH,    --    'T',0x00    --> write tachomter.  2nd byte is speed - 0 is off   
+    PKT_WR_TACH,    --    't',0x00    --> write tachomter.  2nd byte is speed - 0 is off   
     BAD_PACKET);
   signal state : state_type;
 
@@ -154,7 +168,7 @@ begin
   
 
 PROTOCOL_PROCESS : process(clk)
- 
+
 begin
   if rising_edge(clk) then
     if rst = '1' then
@@ -164,7 +178,56 @@ begin
       status_register <= (others => '0'); 
       data_register_to <= (others => '0');
       misc_register <= (others => '0');
+      tachometer <= (others => '0');
+      tach_downcount <= 0;
     else
+      --
+      -- Tachometer information
+      -- The tape runs at 10 in/s low speed or 60in/s high speed.
+      -- There are 500 pulses per revolution of the capstan motor and about 1"of tape per revolution
+      -- Measured tach pulses are:
+      --    210us per tick low speed
+      --    35us per tick high speed
+      -- We will set 35us as our tach clock and use the 2nd byte of the packeet as speed
+      --  0 = off
+      --  1 = 35us
+      --  6 = 210us
+      -- I have been told that the controller chip does a 1/16 divide of the tach. So we probably
+      -- use these slower speeds
+      --  0 = off
+      --  16 = 560us = 0.56ms
+      --  96 = 3360us = 3.36ms
+      
+      -- first we make the 35us counter
+      if tach_counter = tach_counter_type'high then
+        -- we get here once every 35us
+        if tachometer /=  b"00000000" then  -- is it even running?
+          if (tach_downcount = 0) then
+            -- set the tach bit in the status register
+            status_register <= (status_register or b"01000000");
+
+            tach_downcount <= tach_downcount_type(to_integer(unsigned(tachometer)));
+          else
+            tach_downcount <= tach_downcount - 1;
+          end if;
+        end if;
+        tach_counter <= 0;
+      else
+        tach_counter <= tach_counter + 1;
+      end if;
+
+      if (status_reg_was_read = '1') then  -- the control register was written
+        if (status_reg_was_serviced = '0') then
+          -- clear the tach bit in the status register
+          status_register <= (status_register and b"10111111");
+
+          status_reg_was_serviced <= '1';
+        end if;
+      else
+        status_reg_was_serviced <= '0';
+      end if;
+
+      -- Handle incoming uart packets
       case tx_pkt_state is
         -- push 2 bytes onto the tx uart fifo over 4 clock cycles
         when PKT_IDLE =>   -- IDLE
@@ -237,6 +300,12 @@ begin
               if (rx_data = std_logic_vector(to_unsigned(PKT_HDR_WR_MISC, 8))) then
                 state <= PKT_WR_MISC;
               end if;
+              if (rx_data = std_logic_vector(to_unsigned(PKT_HDR_RD_TACH, 8))) then
+                state <= PKT_RD_TACH;
+              end if;
+              if (rx_data = std_logic_vector(to_unsigned(PKT_HDR_WR_TACH, 8))) then
+                state <= PKT_WR_TACH;
+              end if;
               if (rx_data = std_logic_vector(to_unsigned(PKT_HDR_BAD_PACKET, 8))) then
                 state <= BAD_PACKET;
               end if;
@@ -272,8 +341,16 @@ begin
               pkt_byte_0 <= std_logic_vector(to_unsigned(PKT_HDR_RD_MISC, 8));
               pkt_byte_1 <= misc_register; 
               state <= IDLE;
-            when   PKT_WR_MISC =>    --    'x',0x00    --> write misc. contorl codes. TBD
+            when   PKT_WR_MISC =>    --    'x',0x00    --> write misc. control codes. TBD
               misc_register <= rx_data;
+              state <= IDLE;
+            when   PKT_RD_TACH =>    --    'X',0x00    --> Read misc. status and error codes. TBD
+              -- read misc register packet
+              pkt_byte_0 <= std_logic_vector(to_unsigned(PKT_HDR_RD_TACH, 8));
+              pkt_byte_1 <= tachometer; 
+              state <= IDLE;
+            when   PKT_WR_TACH =>    --    'x',0x00    --> write tachometer
+              tachometer <= rx_data;
               state <= IDLE;
             when   BAD_PACKET =>
               pkt_byte_0 <= std_logic_vector(to_unsigned(PKT_HDR_BAD_PACKET, 8));

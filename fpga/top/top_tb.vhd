@@ -183,7 +183,7 @@ wait for 220 * clock_period; -- 1us
 
 -- Now we need to write from the rx uart into the status register and data register
 -- write char to dut
-report "Write status register ";
+report "uart Write status register ";
 uart_tx_data <= std_logic_vector(to_unsigned(PKT_HDR_WR_STATUS, 8)); -- write status register packet
 uart_tx_start <= '1';
 wait until rising_edge(clk);
@@ -196,7 +196,7 @@ wait until rising_edge(clk);
 uart_tx_start <= '0';
 wait for 2000 * clock_period; -- 100us
 
-report "Write data register ";
+report "uart Write data register ";
 uart_tx_data <= std_logic_vector(to_unsigned(PKT_HDR_WR_DATA, 8)); -- write status register packet
 uart_tx_start <= '1';
 wait until rising_edge(clk);
@@ -208,6 +208,33 @@ uart_tx_start <= '1';
 wait until rising_edge(clk);
 uart_tx_start <= '0';
 wait for 2000 * clock_period; -- 200us
+
+report "uart Write tachometer ";
+uart_tx_data <= std_logic_vector(to_unsigned(PKT_HDR_WR_TACH, 8)); -- tachometer to fastest speed
+uart_tx_start <= '1';
+wait until rising_edge(clk);
+uart_tx_start <= '0';
+wait for 2000 * clock_period; -- 200us
+report "0x01";
+uart_tx_data <= "00000001"; -- 0x01
+uart_tx_start <= '1';
+wait until rising_edge(clk);
+uart_tx_start <= '0';
+wait for 10000 * clock_period; -- 1ms
+
+report "uart Write tachometer ";
+uart_tx_data <= std_logic_vector(to_unsigned(PKT_HDR_WR_TACH, 8)); -- tachometer to fastest speed
+uart_tx_start <= '1';
+wait until rising_edge(clk);
+uart_tx_start <= '0';
+wait for 2000 * clock_period; -- 200us
+report "0x01";
+uart_tx_data <= "00010000"; -- 16 - should make 560us.
+uart_tx_start <= '1';
+wait until rising_edge(clk);
+uart_tx_start <= '0';
+wait for 10000 * clock_period; -- 1ms
+
 
 -- Read status
 ReadRegister(TAPE_REGISTER_ADDRESS);

@@ -6,6 +6,7 @@
 ## tape drive register images
 statusRegister = 0
 controlRegister = 0
+tachometer = 0
 
 ##     Tape Control Chip status register
 ##     HP-85 bus address 0xFF08  // Octal 177410
@@ -36,12 +37,26 @@ CONTROL_WRITE_GAP_BIT =  7   ## Write gap
 ##
 ##
 
-PKT_RD_STATUS  = ord('A')  ##    --> Read status register.
-PKT_WR_STATUS  = ord('B')  ##    --> Write status register. second byte it write value
+PKT_RD_STATUS  = ord('S')  ##    --> Read status register.
+PKT_WR_STATUS  = ord('s')  ##    --> Write status register. second byte it write value
 PKT_RD_CONTROL = ord('C')  ##    --> Read control register.
-PKT_WR_CONTROL = ord('D')  ##    --> Write control register. second byte it write value
-PKT_RD_DATA    = ord('E')  ##    --> Read data register.
-PKT_WR_DATA    = ord('F')  ##    --> Write data register. second byte it write value
-PKT_RD_MISC    = ord('G')  ##    --> Read misc. status and error codes. TBD
-PKT_WR_MISC    = ord('H')  ##    --> write misc. contorl codes. TBD
+PKT_WR_CONTROL = ord('c')  ##    --> Write control register. second byte it write value
+PKT_RD_DATA    = ord('D')  ##    --> Read data register.
+PKT_WR_DATA    = ord('d')  ##    --> Write data register. second byte it write value
+PKT_RD_MISC    = ord('M')  ##    --> Read misc. status and error codes. TBD
+PKT_WR_MISC    = ord('m')  ##    --> write misc. contorl codes. TBD
+PKT_RD_TACH    = ord('T')  ##    --> Read misc. status and error codes. TBD
+PKT_WR_TACH    = ord('t')  ##    --> write misc. contorl codes. TBD
+
+TRANSPORT_STATE_OFF         = 0
+TRANSPORT_STATE_FWD_SLOW    = 1
+TRANSPORT_STATE_FWD_FAST    = 2
+TRANSPORT_STATE_RWD_SLOW    = 3
+TRANSPORT_STATE_RWD_FAST    = 4
+
+## each tach count is 35us but there is a 1/16 divide in the HP controller chip.
+TACHOMETER_OFF_COUNTS      = 0
+TACHOMETER_SLOW_COUNTS      = (16*6)
+TACHOMETER_FAST_COUNTS      = (16)
+
 

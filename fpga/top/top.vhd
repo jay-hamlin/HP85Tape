@@ -21,6 +21,9 @@ entity top is
     led_3 : out std_logic;
     led_4 : out std_logic;
     led_5 : out std_logic;
+
+    -- There is a spare test point on the header, pin 44
+    J13_test_point : out std_logic;
      
     -- HP-85 Bus interface
     B85_data : inout std_logic_vector(7 downto 0);
@@ -40,6 +43,7 @@ architecture str of top is
 
   -- internal interface
   signal status_register  : std_logic_vector(7 downto 0);
+  signal status_reg_was_read  : std_logic;
   signal control_register  : std_logic_vector(7 downto 0);
   signal control_reg_avail  : std_logic;
   signal data_register_out  : std_logic_vector(7 downto 0);
@@ -86,6 +90,7 @@ HP85BUS_INST : entity tape_control.hp85bus_interface(rtl)
     bus_output_dir => B85_output_dir,
     -- Module output signals (the back end)
     status_register  =>status_register, 
+    status_reg_was_read => status_reg_was_read,
     control_register  =>control_register,
     control_reg_avail =>control_reg_avail,
     data_register_out  =>data_register_out,
@@ -93,6 +98,7 @@ HP85BUS_INST : entity tape_control.hp85bus_interface(rtl)
     data_reg_avail => data_reg_avail
     );
 
+J13_test_point <= status_reg_was_read;
 
 PROTOCOL_MACH_INST : entity tape_control.protocol_machine(rtl)
   port map (
@@ -100,6 +106,7 @@ PROTOCOL_MACH_INST : entity tape_control.protocol_machine(rtl)
     rst  => rst,
     -- signals to the front end (HP85bus) module
     status_register  =>status_register,
+    status_reg_was_read => status_reg_was_read,
     control_register  =>control_register,
     control_reg_avail  =>control_reg_avail,
     data_register_from  =>data_register_out,   -- protocol_machine --> hp85bus

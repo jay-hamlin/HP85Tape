@@ -27,6 +27,7 @@ entity hp85bus_interface is
     bus_output_dir : out std_logic; -- PIO2.15 -fpga pin 60 connects to 74LVC4245 DIR pin. HIGH = BUS INPUT, LOW = BUS OUTPUT
     -- Module output signals (the back end)
     status_register  : in std_logic_vector(7 downto 0);
+    status_reg_was_read : out std_logic;  -- asserts when the status register was read 
     control_register  : out std_logic_vector(7 downto 0);
     control_reg_avail : out std_logic;  -- asserts when the control register has been written
     data_register_out  : out std_logic_vector(7 downto 0);
@@ -75,6 +76,8 @@ architecture rtl of hp85bus_interface is
     if rising_edge(ph1_clk) then
       control_reg_avail <= '0';  -- default value
       data_reg_avail <= '0';  -- default value
+      status_reg_was_read <= '0';  -- default value
+      
       if nLMA_event = '1' then
         -- Little Endian
         latched_address(7 downto 0) <= latched_address(15 downto 8);    -- similar to  "address_latch >>= 8;             
@@ -89,6 +92,11 @@ architecture rtl of hp85bus_interface is
           data_register_out <= bus_data;
           data_reg_avail <= '1';
         end if;  
+      end if;
+      if nRD_event = '1' then
+        if (latched_address = TAPE_REGISTER_ADDRESS) then
+          status_reg_was_read <= '1';
+        end if;
       end if;
     end if;
   end process;
@@ -110,7 +118,6 @@ architecture rtl of hp85bus_interface is
         nWR_event <= '1';
       end if;
       if (bus_nRD = '0') then -- read 
---      nRD_event <= '1'; -- nRD_event was used for debugging only
         if (latched_address = TAPE_REGISTER_ADDRESS) then
           nRD_event <= '1';
           latched_data <= status_register;

@@ -26,6 +26,8 @@ package constants is
   constant PKT_HDR_WR_MISC    : integer := 16#6D#; -- 'm'
   constant PKT_HDR_RD_TACH    : integer := 16#54#; -- 'T'
   constant PKT_HDR_WR_TACH    : integer := 16#74#; -- 't'
+  constant PKT_HDR_RD_HOLE    : integer := 16#48#; -- 'H'
+  constant PKT_HDR_WR_HOLE    : integer := 16#68#; -- 'h'
   constant PKT_HDR_BAD_PACKET : integer := 16#42#; -- 'B'
 
 end package;

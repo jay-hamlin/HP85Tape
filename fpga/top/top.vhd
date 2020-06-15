@@ -69,9 +69,7 @@ DEBUG_LEDS : entity tape_control.debug_leds(rtl)
     led_3_in => rst_button,
     led_1 => led_1,
     led_2 => led_2,
-    led_3 => led_3,
-    led_4 => led_4,
-    led_5 => led_5
+    led_3 => led_3
   );
  
 HP85BUS_INST : entity tape_control.hp85bus_interface(rtl)
@@ -114,7 +112,10 @@ PROTOCOL_MACH_INST : entity tape_control.protocol_machine(rtl)
     data_reg_avail  =>data_reg_avail,
     -- uart rx, tx through TOP
     uart_tx  => uart_tx,
-    uart_rx  => uart_rx
+    uart_rx  => uart_rx,
+    -- tachometer debug
+    tach_toggler  => led_4,
+    hole_flag  => led_5
   );
 
 end architecture;

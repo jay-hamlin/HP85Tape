@@ -85,8 +85,10 @@ entity protocol_machine is
     data_reg_avail : in std_logic;  -- asserts when the data register has been writte
     -- uart rx, tx through TOP
     uart_tx : out std_logic;
-    uart_rx : in std_logic
-
+    uart_rx : in std_logic;
+    -- tachometer debug
+    tach_toggler : out std_logic;
+    hole_flag    : out std_logic
   );
 end protocol_machine; 
 
@@ -107,12 +109,15 @@ architecture rtl of protocol_machine is
   signal misc_register : std_logic_vector(7 downto 0);
   signal pkt_byte_0    : std_logic_vector(7 downto 0);
   signal pkt_byte_1    : std_logic_vector(7 downto 0);
-  
+  signal hole_counter  : std_logic_vector(7 downto 0);
   -- Flags
   signal control_reg_serviced : std_logic;
   signal data_reg_serviced    : std_logic;
   signal rx_valid_serviced    : std_logic;
   signal status_reg_was_serviced   : std_logic;
+
+  -- debug Flags
+  signal  tach_toggle_state : std_logic;
 
   -- For counting tachometer periods. 35us
   constant clock_cycles_per_tach : integer := integer(clock_frequency * real(0.000035));
@@ -131,8 +136,10 @@ architecture rtl of protocol_machine is
     PKT_WR_DATA,    --    'd',0xnn    --> Write data register. second byte it write value
     PKT_RD_MISC,    --    'M',0x00    --> Read misc. status and error codes. TBD
     PKT_WR_MISC,    --    'm',0x00    --> write misc. contorl codes. TBD
-    PKT_RD_TACH,    --    'T',0x00    --> write tachomter.  2nd byte is speed - 0 is off   
+    PKT_RD_TACH,    --    'T',0x00    --> read tachomter.  2nd byte is speed - 0 is off   
     PKT_WR_TACH,    --    't',0x00    --> write tachomter.  2nd byte is speed - 0 is off   
+    PKT_RD_HOLE,    --    'T',0x00    --> read hole counter.  2nd byte is speed - 0 is off   
+    PKT_WR_HOLE,    --    't',0x00    --> write hole counter.  2nd byte is speed - 0 is off   
     BAD_PACKET);
   signal state : state_type;
 
@@ -179,6 +186,7 @@ begin
       data_register_to <= (others => '0');
       misc_register <= (others => '0');
       tachometer <= (others => '0');
+      hole_counter <= (others => '0');
       tach_downcount <= 0;
     else
       --
@@ -205,8 +213,20 @@ begin
           if (tach_downcount = 0) then
             -- set the tach bit in the status register
             status_register <= (status_register or b"01000000");
+            -- hole_counter says to set the hole for x tach counts
+            if(hole_counter /=  b"00000000") then
+              hole_counter <= std_logic_vector(unsigned(hole_counter)-1);
+              status_register <= (status_register or b"00010000");
+              hole_flag <= '1';
+            else
+              status_register <= (status_register and b"11101111");  
+              hole_flag <= '0';           
+            end if;
 
-            tach_downcount <= tach_downcount_type(to_integer(unsigned(tachometer)));
+            tach_toggle_state <= (not tach_toggle_state);
+            tach_toggler <= tach_toggle_state;
+
+            tach_downcount <= tach_downcount_type(to_integer(unsigned(tachometer))-1);
           else
             tach_downcount <= tach_downcount - 1;
           end if;
@@ -306,6 +326,12 @@ begin
               if (rx_data = std_logic_vector(to_unsigned(PKT_HDR_WR_TACH, 8))) then
                 state <= PKT_WR_TACH;
               end if;
+              if (rx_data = std_logic_vector(to_unsigned(PKT_HDR_RD_HOLE, 8))) then
+                state <= PKT_RD_HOLE;
+              end if;
+              if (rx_data = std_logic_vector(to_unsigned(PKT_HDR_WR_HOLE, 8))) then
+                state <= PKT_WR_HOLE;
+              end if;
               if (rx_data = std_logic_vector(to_unsigned(PKT_HDR_BAD_PACKET, 8))) then
                 state <= BAD_PACKET;
               end if;
@@ -351,6 +377,14 @@ begin
               state <= IDLE;
             when   PKT_WR_TACH =>    --    'x',0x00    --> write tachometer
               tachometer <= rx_data;
+              state <= IDLE;
+            when   PKT_RD_HOLE =>    --    'X',0x00    --> Read misc. status and error codes. TBD
+              -- read misc register packet
+              pkt_byte_0 <= std_logic_vector(to_unsigned(PKT_HDR_RD_HOLE, 8));
+              pkt_byte_1 <= hole_counter; 
+              state <= IDLE;
+            when   PKT_WR_HOLE =>    --    'x',0x00    --> write tachometer
+              hole_counter <= rx_data;
               state <= IDLE;
             when   BAD_PACKET =>
               pkt_byte_0 <= std_logic_vector(to_unsigned(PKT_HDR_BAD_PACKET, 8));

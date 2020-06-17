@@ -37,28 +37,31 @@ def PrintControlRegister(value):
     return
     
 def PrintStatusRegister(value):
-   prtLine = "Status reg=0x%02x "%value
-   if(utility.testRegBit(value,header.STATUS_CASSETTE_IN_BIT)):
-      prtLine = prtLine + "TAPE_IN "
-   if(utility.testRegBit(value,header.STATUS_STALL_BIT)):
-      prtLine = prtLine + "STALL "
-   if(utility.testRegBit(value,header.STATUS_ILIM_BIT)):
-      prtLine = prtLine + "ILIM "
-   if(utility.testRegBit(value,header.STATUS_WRITE_EN_BIT)):
-      prtLine = prtLine + "WR_EN "
-   if(utility.testRegBit(value,header.STATUS_HOLE_BIT)):
-      prtLine = prtLine + "HOLE "
-   if(utility.testRegBit(value,header.STATUS_GAP_BIT)):
-      prtLine = prtLine + "GAP "
-   if(utility.testRegBit(value,header.STATUS_TACH_BIT)):
-      prtLine = prtLine + "TACH "
-   if(utility.testRegBit(value,header.STATUS_READY_BIT)):
-      prtLine = prtLine + "READY "
+    prtLine = "Status reg=0x%02x "%value
+    if(utility.testRegBit(value,header.STATUS_CASSETTE_IN_BIT)):
+        prtLine = prtLine + "TAPE_IN "
+        print("Cartridge IN")
+    else:
+        print("Cartridge OUT")
+    if(utility.testRegBit(value,header.STATUS_STALL_BIT)):
+        prtLine = prtLine + "STALL "
+    if(utility.testRegBit(value,header.STATUS_ILIM_BIT)):
+        prtLine = prtLine + "ILIM "
+    if(utility.testRegBit(value,header.STATUS_WRITE_EN_BIT)):
+        prtLine = prtLine + "WR_EN "
+    if(utility.testRegBit(value,header.STATUS_HOLE_BIT)):
+        prtLine = prtLine + "HOLE "
+    if(utility.testRegBit(value,header.STATUS_GAP_BIT)):
+        prtLine = prtLine + "GAP "
+    if(utility.testRegBit(value,header.STATUS_TACH_BIT)):
+        prtLine = prtLine + "TACH "
+    if(utility.testRegBit(value,header.STATUS_READY_BIT)):
+        prtLine = prtLine + "READY "
       
 ##   print (prtLine,end=" ")
-   print (prtLine)
+    print (prtLine)
 
-   return
+    return
 
 def PacketDecoder(cmnd,value):
     global statusRegister
@@ -70,7 +73,19 @@ def PacketDecoder(cmnd,value):
         header.controlRegister = value
         PrintControlRegister(value)
         
-        temp = (value and 0b00011110) ## mask only the motor control bits
+        ##  These constants were found in the HP-85's rom
+        ##  values sent to the command register
+        ##  command register bytes sent
+        ##  0x06 = 006   SREV COMMAND
+        ##  0x0E = 016   SFWD COMMAND
+        ##  0x16 = 026   FREV COMMAND
+        ##  0x1E = 036   FFWD COMMAND
+        ##  0x02 = 002    STOP!
+        ##  0xC2 = 302    In rewind routine "find 2 holes"
+        ##  0x15 = 025
+        ##  0x10 = 020
+
+        temp = (value & 0b00011110) ## mask only the motor control bits
         
         if(temp==0x00): ## (
             transport.TapeTransportSetState(header.TRANSPORT_STATE_OFF,value)
@@ -85,8 +100,8 @@ def PacketDecoder(cmnd,value):
 
         retValue = 1
     elif cmnd == header.PKT_RD_STATUS:
-        header.controlRegister = value
-        PrintStatusRegister(value)
+ ##       header.statusRegister = value
+ ##       PrintStatusRegister(value)
         retValue = 1
     elif cmnd == header.PKT_RD_TACH:
         header.tachometer = value

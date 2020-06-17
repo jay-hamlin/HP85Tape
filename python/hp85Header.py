@@ -4,7 +4,7 @@
 ##
 
 ## tape drive register images
-statusRegister = 0
+statusRegister = 0 ## Everett's emulator inits status at 0240 Octal= 0xA0
 controlRegister = 0
 tachometer = 0
 
@@ -45,8 +45,10 @@ PKT_RD_DATA    = ord('D')  ##    --> Read data register.
 PKT_WR_DATA    = ord('d')  ##    --> Write data register. second byte it write value
 PKT_RD_MISC    = ord('M')  ##    --> Read misc. status and error codes. TBD
 PKT_WR_MISC    = ord('m')  ##    --> write misc. contorl codes. TBD
-PKT_RD_TACH    = ord('T')  ##    --> Read misc. status and error codes. TBD
-PKT_WR_TACH    = ord('t')  ##    --> write misc. contorl codes. TBD
+PKT_RD_TACH    = ord('T')  ##    --> Read tach. status and error codes. TBD
+PKT_WR_TACH    = ord('t')  ##    --> write tach. contorl codes. TBD
+PKT_RD_HOLE    = ord('H')  ##    --> Read hole. status and error codes. TBD
+PKT_WR_HOLE    = ord('h')  ##    --> write hole. contorl codes. TBD
 
 TRANSPORT_STATE_OFF         = 0
 TRANSPORT_STATE_FWD_SLOW    = 1

@@ -87,7 +87,7 @@ entity protocol_machine is
     uart_tx : out std_logic;
     uart_rx : in std_logic;
     -- tachometer debug
-    tach_toggler : out std_logic;
+    tach_flag    : out std_logic;
     hole_flag    : out std_logic
   );
 end protocol_machine; 
@@ -114,7 +114,7 @@ architecture rtl of protocol_machine is
   signal control_reg_serviced : std_logic;
   signal data_reg_serviced    : std_logic;
   signal rx_valid_serviced    : std_logic;
-  signal status_reg_was_serviced   : std_logic;
+
 
   -- debug Flags
   signal  tach_toggle_state : std_logic;
@@ -188,6 +188,9 @@ begin
       tachometer <= (others => '0');
       hole_counter <= (others => '0');
       tach_downcount <= 0;
+      -- debugging flags
+      hole_flag <= '0'; -- bit 4 status reg
+      tach_flag <= '0'; -- bit 6 status reg
     else
       --
       -- Tachometer information
@@ -205,26 +208,32 @@ begin
       --  0 = off
       --  16 = 560us = 0.56ms
       --  96 = 3360us = 3.36ms
-      
+
+      if (status_reg_was_read = '1') then  -- the status register was read so we clear tach
+        tach_flag <= '0';
+        status_register(6) <= '0';  -- TACH bit
+        status_register(7) <= '0';  -- DATA read bit
+      end if;
+
       -- first we make the 35us counter
       if tach_counter = tach_counter_type'high then
         -- we get here once every 35us
         if tachometer /=  b"00000000" then  -- is it even running?
           if (tach_downcount = 0) then
             -- set the tach bit in the status register
-            status_register <= (status_register or b"01000000");
+            -- and set or clear the hole bit as needed
             -- hole_counter says to set the hole for x tach counts
-            if(hole_counter /=  b"00000000") then
-              hole_counter <= std_logic_vector(unsigned(hole_counter)-1);
-              status_register <= (status_register or b"00010000");
-              hole_flag <= '1';
-            else
-              status_register <= (status_register and b"11101111");  
-              hole_flag <= '0';           
-            end if;
+            tach_flag <= '1';   
+            status_register(6) <= '1';  -- TACH bit
 
-            tach_toggle_state <= (not tach_toggle_state);
-            tach_toggler <= tach_toggle_state;
+            if(hole_counter =  b"00000000") then
+              hole_flag <= '0';     
+              status_register(4) <= '0';  -- HOLE bit  
+            else    
+              hole_counter <= std_logic_vector(unsigned(hole_counter)-1);
+              hole_flag <= '1';
+              status_register(4) <= '1';  -- HOLE bit
+            end if;
 
             tach_downcount <= tach_downcount_type(to_integer(unsigned(tachometer))-1);
           else
@@ -234,17 +243,6 @@ begin
         tach_counter <= 0;
       else
         tach_counter <= tach_counter + 1;
-      end if;
-
-      if (status_reg_was_read = '1') then  -- the control register was written
-        if (status_reg_was_serviced = '0') then
-          -- clear the tach bit in the status register
-          status_register <= (status_register and b"10111111");
-
-          status_reg_was_serviced <= '1';
-        end if;
-      else
-        status_reg_was_serviced <= '0';
       end if;
 
       -- Handle incoming uart packets
@@ -341,7 +339,15 @@ begin
               pkt_byte_1 <= status_register; 
               state <= IDLE;
             when   PKT_WR_STATUS =>  --    's',0xnn    --> Write status register. second byte it write value
-              status_register <= rx_data;
+              status_register(0) <= rx_data(0);
+              status_register(1) <= rx_data(1);
+              status_register(2) <= rx_data(2);
+              status_register(3) <= rx_data(3);
+        --      status_register(4) <= rx_data(4);  -- HOLE bit
+              status_register(5) <= rx_data(5);
+        --      status_register(6) <= rx_data(6);  -- TACH bit
+        --      status_register(7) <= rx_data(7);  -- DATA ready bit
+             
               state <= IDLE;
             when   PKT_RD_CONTROL => --    'C',0x00    --> Read control register.
               -- read control register packet
@@ -360,7 +366,7 @@ begin
             when   PKT_WR_DATA =>    --    'd',0xnn    --> Write data register. second byte it write value
               data_register_to <= rx_data;
               -- update the status register
-              status_register <= (status_register or b"10000000");   -- STATUS_READY_BIT = 7
+              status_register(7) <= '1';  -- STATUS_READY_BIT = 
               state <= IDLE;
             when   PKT_RD_MISC =>    --    'X',0x00    --> Read misc. status and error codes. TBD
               -- read misc register packet

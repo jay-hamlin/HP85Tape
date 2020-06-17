@@ -114,8 +114,8 @@ PROTOCOL_MACH_INST : entity tape_control.protocol_machine(rtl)
     uart_tx  => uart_tx,
     uart_rx  => uart_rx,
     -- tachometer debug
-    tach_toggler  => led_4,
-    hole_flag  => led_5
-  );
+     tach_flag  => led_4,
+     hole_flag  => led_5
+     );
 
 end architecture;

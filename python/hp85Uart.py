@@ -22,31 +22,27 @@ def uartMonitorLoop():
     
     transportLoopTime = time.monotonic_ns()
 
-    newPkt = bytearray(2)
     index = 0
-    emptyCycles = 0
-    writeLine = ""
     
+    dbgWr0x22 = bytearray([0x22])
+    dbgWr0x55 = bytearray([0x55])
+    dbgWr0xAA = bytearray([0xAA])
+
     while ((keepLooping == 1) and (uartserialport)):
-        byteStr = uartserialport.read(1)
-        if (len(byteStr)>0):
-            newPkt[index] = byteStr[0] ## chr(byteStr[0]) ##makeASCII(ch)
-            index += 1
-            if( index == 2):
-                cmnd = ord(newPkt[0:1])
-                value =ord(newPkt[1:2])
-                index = 0
+        uartserialport.write(dbgWr0x22)
+        iw = uartserialport.inWaiting()
+        if(iw>1):
+            uartserialport.write(dbgWr0x55)
+
+            byteStr = uartserialport.read(iw)
+            if(byteStr):
+                uartserialport.write(dbgWr0xAA)
+                cmnd = byteStr[0]
+                value =byteStr[1]
                 ## PacketDecoder returns 1 if it handled the packet ok.
                 if(packet.PacketDecoder(cmnd,value)==0):
                     print("0rx= "+ "%c"%cmnd+ " 0x%02x "%value)
-                    
-            emptyCycles = 10
-        else:
-                ## if 10 cycles go by without a char we clear the packet to re-sync
-            if emptyCycles > 0:
-                emptyCycles -= 1
-            else:
-                index = 0  ## when emptyCycles get to zero reset index
+
         
         ## a zero drift 3.125ms timer
         if(time.monotonic_ns() > transportLoopTime):

@@ -58,16 +58,22 @@ def uartMonitorLoop():
 
     return;
     
-def SetStatusRegisterBit(bit):
+def SetStatusRegister(value):
+    header.statusRegister = value
+    WritePacketNoEcho(header.PKT_WR_STATUS,header.statusRegister)
 
-    header.statusRegister = utility.setRegBit(header.statusRegister,bit)
+    return
+
+def SetStatusRegisterBits(bits):
+
+    header.statusRegister = (header.statusRegister | bits)
     WritePacketNoEcho(header.PKT_WR_STATUS,header.statusRegister)
 
     return
     
-def ClearStatusRegisterBit(bit):
+def ClearStatusRegisterBits(bits):
 
-    header.statusRegister = utility.clearRegBit(header.statusRegister,bit)
+    header.statusRegister = (header.statusRegister & (~bits))
     WritePacketNoEcho(header.PKT_WR_STATUS,header.statusRegister)
 
     return

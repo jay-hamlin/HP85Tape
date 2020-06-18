@@ -212,7 +212,6 @@ begin
       if (status_reg_was_read = '1') then  -- the status register was read so we clear tach
         tach_flag <= '0';
         status_register(6) <= '0';  -- TACH bit
-        status_register(7) <= '0';  -- DATA read bit
       end if;
 
       -- first we make the 35us counter
@@ -273,6 +272,9 @@ begin
           pkt_byte_0 <= std_logic_vector(to_unsigned(PKT_HDR_RD_CONTROL, 8));
           pkt_byte_1 <= control_register;  -- read control register packet
           control_reg_serviced <= '1';
+          -- we clear the READY bit in the status register
+          -- the next write to status will set it.
+          status_register(7) <= '0';  -- STATUS_READY_BIT = 
         end if;
       else
         control_reg_serviced <= '0';
@@ -346,7 +348,7 @@ begin
         --      status_register(4) <= rx_data(4);  -- HOLE bit
               status_register(5) <= rx_data(5);
         --      status_register(6) <= rx_data(6);  -- TACH bit
-        --      status_register(7) <= rx_data(7);  -- DATA ready bit
+              status_register(7) <= rx_data(7);  -- DATA ready bit
              
               state <= IDLE;
             when   PKT_RD_CONTROL => --    'C',0x00    --> Read control register.
@@ -365,8 +367,6 @@ begin
               state <= IDLE;
             when   PKT_WR_DATA =>    --    'd',0xnn    --> Write data register. second byte it write value
               data_register_to <= rx_data;
-              -- update the status register
-              status_register(7) <= '1';  -- STATUS_READY_BIT = 
               state <= IDLE;
             when   PKT_RD_MISC =>    --    'X',0x00    --> Read misc. status and error codes. TBD
               -- read misc register packet

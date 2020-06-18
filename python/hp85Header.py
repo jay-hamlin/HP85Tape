@@ -12,28 +12,28 @@ tachometer = 0
 ##     HP-85 bus address 0xFF08  // Octal 177410
 ##     This register is read only from the HP-85
 ##
-STATUS_CASSETTE_IN_BIT = 0  ## Cassette in
-STATUS_STALL_BIT = 1        ## Tape stalled
-STATUS_ILIM_BIT = 2         ## Overcurrent
-STATUS_WRITE_EN_BIT = 3     ## Write enabled
-STATUS_HOLE_BIT = 4         ## Hole detected
-STATUS_GAP_BIT = 5          ## Gap detected
-STATUS_TACH_BIT = 6         ## Tachometer tick
-STATUS_READY_BIT = 7        ## Ready -meaning, there is a DATA byte available to read.
+STATUS_CASSETTE_IN_BIT = 0x01  ## Cassette in
+STATUS_STALL_BIT       = 0x02  ## Tape stalled
+STATUS_ILIM_BIT        = 0x04  ## Overcurrent
+STATUS_WRITE_EN_BIT    = 0x08  ## Write enabled
+STATUS_HOLE_BIT        = 0x10  ## Hole detected
+STATUS_GAP_BIT         = 0x20  ## Gap detected
+STATUS_TACH_BIT        = 0x40  ## Tachometer tick
+STATUS_READY_BIT       = 0x80  ## Ready -meaning, there is a DATA byte available to read.
 
 
 ##     Tape Control Chip control register
 ##     HP-85 bus address 0xFF08  // Octal 177410
 ##     This register is write only from the HP-85
 ##
-CONTROL_TRACK_NO_BIT =   0   ## Track selection
-CONTROL_POWER_UP_BIT =   1   ## Tape controller power up
-CONTROL_MOTOR_ON_BIT =   2   ## Motor control
-CONTROL_DIR_FWD_BIT =    3   ## Tape direction = forward
-CONTROL_FAST_BIT =       4   ## Speed = fast
-CONTROL_WRITE_DATA_BIT = 5   ## Write data
-CONTROL_WRITE_SYNC_BIT = 6   ## Write SYNC
-CONTROL_WRITE_GAP_BIT =  7   ## Write gap
+CONTROL_TRACK_NO_BIT   = 0x01   ## Track selection
+CONTROL_POWER_UP_BIT   = 0x02   ## Tape controller power up
+CONTROL_MOTOR_ON_BIT   = 0x04   ## Motor control
+CONTROL_DIR_FWD_BIT    = 0x08   ## Tape direction = forward
+CONTROL_FAST_BIT       = 0x10   ## Speed = fast
+CONTROL_WRITE_DATA_BIT = 0x20   ## Write data
+CONTROL_WRITE_SYNC_BIT = 0x40   ## Write SYNC
+CONTROL_WRITE_GAP_BIT  = 0x80   ## Write gap
 ##
 ##
 
@@ -55,6 +55,7 @@ TRANSPORT_STATE_FWD_SLOW    = 1
 TRANSPORT_STATE_FWD_FAST    = 2
 TRANSPORT_STATE_RWD_SLOW    = 3
 TRANSPORT_STATE_RWD_FAST    = 4
+TRANSPORT_STATE_SLOW_2HOLE  = 5
 
 ## each tach count is 35us but there is a 1/16 divide in the HP controller chip.
 TACHOMETER_OFF_COUNTS      = 0

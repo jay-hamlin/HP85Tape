@@ -48,46 +48,51 @@ msStartTime = 0
 
 prevStatusRegister = 0
 prevControlRegister = 0
+prevTachometer = 0
 
 transportState = 0
 transportTime  = 0
 
+withinAHole = 0
+
 ## there are 11 holes in the tape.
 ## we check the tape position and set the hole flag in the status register as needed
 def checkForTapeHoles(position,speed):
-
+    global withinAHole
     index = 0;
     while(index< tape.tapeHoleArraySize):
-        if((position>=tape.tapeHoleArray[index][0]) and (position<=tape.tapeHoleArray[index][0]-speed)):
+        if(speed<0):
+            tp2 = tape.tapeHoleArray[index]
+            tp1 = tape.tapeHoleArray[index] + speed + 1
+        else:
+            tp1 = tape.tapeHoleArray[index]
+            tp2 = tape.tapeHoleArray[index] + speed - 1
+            
+        if((position>=tp1) and (position<=tp2)):
             index = tape.tapeHoleArraySize             ## in the hole
         index +=1
         
     if(index == (tape.tapeHoleArraySize+1)):
-        ## check to see if the hole bit is clear so we don't send a zillion packets.
-        if(utility.testRegBit(header.statusRegister,header.STATUS_HOLE_BIT)==0):
-            utility.setRegBit(header.statusRegister,header.STATUS_HOLE_BIT)
-            uart.WritePacketNoEcho(header.PKT_WR_HOLE,0x02)  ## hole set for 2 tachs
-    else:
-        if(utility.testRegBit(header.statusRegister,header.STATUS_HOLE_BIT)==1):
-            utility.clearRegBit(header.statusRegister,header.STATUS_HOLE_BIT)
-            uart.ClearStatusRegisterBit(header.STATUS_HOLE_BIT)
+        uart.WritePacketNoEcho(header.PKT_WR_HOLE,0x02)  ## hole set for 2 tachs
+        uart.ClearStatusRegisterBits(header.STATUS_READY_BIT|header.STATUS_GAP_BIT)
+        print("HOLE ",end="")
         
     return
     
 def printTapeArray():
     print("Tape hole locations in loop counts")
-    print("  P1_A   %6d"%tape.tapeHoleArray[0][0]+" ,%6d"%tape.tapeHoleArray[0][1])
-    print("  P1_B   %6d"%tape.tapeHoleArray[1][0]+" ,%6d"%tape.tapeHoleArray[1][1])
-    print("  P2_A   %6d"%tape.tapeHoleArray[2][0]+" ,%6d"%tape.tapeHoleArray[2][1])
-    print("  P2_B   %6d"%tape.tapeHoleArray[3][0]+" ,%6d"%tape.tapeHoleArray[3][1])
-    print("  P3_A   %6d"%tape.tapeHoleArray[4][0]+" ,%6d"%tape.tapeHoleArray[4][1])
-    print("  P3_B   %6d"%tape.tapeHoleArray[5][0]+" ,%6d"%tape.tapeHoleArray[5][1])
-    print("  BOT_LP %6d"%tape.tapeHoleArray[6][0]+" ,%6d"%tape.tapeHoleArray[6][1])
+    print("  P1_A   %6d"%tape.tapeHoleArray[0])
+    print("  P1_B   %6d"%tape.tapeHoleArray[1])
+    print("  P2_A   %6d"%tape.tapeHoleArray[2])
+    print("  P2_B   %6d"%tape.tapeHoleArray[3])
+    print("  P3_A   %6d"%tape.tapeHoleArray[4])
+    print("  P3_B   %6d"%tape.tapeHoleArray[5])
+    print("  BOT_LP %6d"%tape.tapeHoleArray[6])
 
-    print("  EOT_EW %6d"%tape.tapeHoleArray[7][0]+" ,%6d"%tape.tapeHoleArray[7][1])
-    print("  EOT_C  %6d"%tape.tapeHoleArray[8][0]+" ,%6d"%tape.tapeHoleArray[8][1])
-    print("  EOT_B  %6d"%tape.tapeHoleArray[9][0]+" ,%6d"%tape.tapeHoleArray[9][1])
-    print("  EOT_A  %6d"%tape.tapeHoleArray[10][0]+" ,%6d"%tape.tapeHoleArray[10][1])
+    print("  EOT_EW %6d"%tape.tapeHoleArray[7])
+    print("  EOT_C  %6d"%tape.tapeHoleArray[8])
+    print("  EOT_B  %6d"%tape.tapeHoleArray[9])
+    print("  EOT_A  %6d"%tape.tapeHoleArray[10])
 
     return
     
@@ -96,10 +101,21 @@ def printTransportStats():
     global tapeInches
     global transportState
     global transportTime
+    global  msStartTime
     
-    print("tape position=%d"%tapePosition+" counts, %d"%tapeInches+" inches")
-    print("transport state=%d"%transportState+", time=%d"%transportTime)
-    print("Status reg=0x%02x "%header.statusRegister+" Control reg=0x%02x "%header.controlRegister)
+    stateList = ["TRANSPORT_STATE_OFF",\
+                "TRANSPORT_STATE_FWD_SLOW",\
+                "TRANSPORT_STATE_FWD_FAST",\
+                "TRANSPORT_STATE_RWD_SLOW",\
+                "TRANSPORT_STATE_RWD_FAST",\
+                "TRANSPORT_STATE_SLOW_2HOLE"]
+    
+    ms = int(time.monotonic_ns()/1000000) - msStartTime
+    
+    print("\n%s"%stateList[transportState]+", t=%d"%ms+"ms, tach=%d"%header.tachometer)
+
+    print("   Tape position=%d"%tapePosition+" counts, %d"%tapeInches+" inches")
+    print("   Status reg=0x%02x "%header.statusRegister+" Control reg=0x%02x "%header.controlRegister)
 
     return
 
@@ -112,11 +128,11 @@ def updateTapePosition(increment):
         tapePosition += increment
         ## check if the tape is at the end stops
         if(tapePosition<0):
-            uart.SetStatusRegisterBit(header.STATUS_STALL_BIT)
+            uart.SetStatusRegisterBits(header.STATUS_STALL_BIT)
             tapePosition = 0
             TapeTransportSetState(header.TRANSPORT_STATE_OFF,0)
         elif(tapePosition>tape.TAPE_LENGTH_IN_LOOPS):
-            uart.SetStatusRegisterBit(header.STATUS_STALL_BIT)
+            uart.SetStatusRegisterBits(header.STATUS_STALL_BIT)
             tapePosition = tape.TAPE_LENGTH_IN_LOOPS
         else:
         ## we know the tape is moving.
@@ -144,9 +160,13 @@ def printTapeInches():
 def printStatusChanges():
     global prevStatusRegister
     global prevControlRegister
+    global prevTachometer
     
     printit = 0
 
+    if(header.tachometer != prevTachometer):
+        prevTachometer = header.tachometer
+        printit = 1
     if(header.statusRegister != prevStatusRegister):
         prevStatusRegister = header.statusRegister
         printit = 1
@@ -157,14 +177,16 @@ def printStatusChanges():
         printTransportStats()
     
     return
+    
+def WriteTachometer(value):
+    header.tachometer = value
+    uart.WritePacketNoEcho(header.PKT_WR_TACH,value)
+    return
 
 def transportLoop():
     global  transportState
     global  transportTime
     global  tapePosition
-    
-    
-##    while (1):
     
     printTapeInches()
     printStatusChanges()
@@ -172,57 +194,58 @@ def transportLoop():
     if(transportState == header.TRANSPORT_STATE_OFF):
         if(transportTime == 0):
             ## turn tachometer off
-            uart.WritePacketAndEcho(header.PKT_WR_TACH,header.TACHOMETER_OFF_COUNTS)
-            uart.ClearStatusRegisterBit(header.STATUS_STALL_BIT)
-            print("MOTOR STOP")
+            WriteTachometer(header.TACHOMETER_OFF_COUNTS)
+            uart.SetStatusRegister(header.STATUS_READY_BIT|header.STATUS_GAP_BIT|header.STATUS_CASSETTE_IN_BIT)
         else:
             updateTapePosition(0)
 
     elif(transportState == header.TRANSPORT_STATE_FWD_SLOW):
         if(transportTime == 0):
             ## turn tachometer on slow speed
-            uart.WritePacketAndEcho(header.PKT_WR_TACH,header.TACHOMETER_SLOW_COUNTS)
-            print("Forward SLOW")
+            WriteTachometer(header.TACHOMETER_SLOW_COUNTS)
+            uart.SetStatusRegisterBits(header.STATUS_READY_BIT)
         else:
             updateTapePosition(+1)
 
     elif(transportState == header.TRANSPORT_STATE_FWD_FAST):
         if(transportTime == 0):
             ## turn tachometer on fast speed
-            uart.WritePacketAndEcho(header.PKT_WR_TACH,header.TACHOMETER_FAST_COUNTS)
-            print("Forward FAST")
+            WriteTachometer(header.TACHOMETER_FAST_COUNTS)
         else:
             updateTapePosition(+6)
             
     elif(transportState == header.TRANSPORT_STATE_RWD_SLOW):
         if(transportTime == 0):
             ## turn tachometer on slow speed
-            uart.WritePacketAndEcho(header.PKT_WR_TACH,header.TACHOMETER_SLOW_COUNTS)
-            print("Rewind SLOW")
+            WriteTachometer(header.TACHOMETER_SLOW_COUNTS)
         else:
             updateTapePosition(-1)
 
     elif(transportState == header.TRANSPORT_STATE_RWD_FAST):
         if(transportTime == 0):
             ## turn tachometer on fast speed
-            uart.WritePacketAndEcho(header.PKT_WR_TACH,header.TACHOMETER_FAST_COUNTS)
-            print("Rewind FAST")
+            WriteTachometer(header.TACHOMETER_FAST_COUNTS)
+            uart.SetStatusRegisterBits(header.STATUS_READY_BIT)
         else:
             updateTapePosition(-6)
+            
+    elif(transportState == header.TRANSPORT_STATE_SLOW_2HOLE):
+        if(transportTime == 0):
+            uart.WritePacketNoEcho(header.PKT_WR_HOLE,0x08)
+        if(transportTime == 1):
+            ## motor is off but we are going to let the tach slow
+            WriteTachometer(header.TACHOMETER_OFF_COUNTS)
+            uart.SetStatusRegister(header.STATUS_READY_BIT|header.STATUS_GAP_BIT|header.STATUS_CASSETTE_IN_BIT)
+            updateTapePosition(-1)
 
     transportTime += 1
- ##       time.sleep(LOOP_DELAY_TIME)
      
     return
 
 def TapeTransportSetState(state,value):
     global  transportState
     global  transportTime
-    global  msStartTime
-    
-    ms = int(time.monotonic_ns()/1000000) - msStartTime
-    print("time=%d"%ms+"ms")
-    
+        
     transportState = state
     transportTime = 0
     return

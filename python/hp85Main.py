@@ -54,44 +54,16 @@ transport.TapeTransportInit()
 
 tachSpeed = 0
 
-## cartridge in
-header.statusRegister = utility.setRegBit(header.statusRegister,header.STATUS_CASSETTE_IN_BIT)
-
 while (uart.keepLooping ==1):
     kbdChoice = printMenu()
     transport.printTransportStats()
-    if kbdChoice == 't':  ## toggle cartridge bit in status register
-        if(utility.testRegBit(header.statusRegister,header.STATUS_CASSETTE_IN_BIT)):
-            header.statusRegister = utility.clearRegBit(header.statusRegister,header.STATUS_CASSETTE_IN_BIT)
-        else:
-            header.statusRegister = utility.setRegBit(header.statusRegister,header.STATUS_CASSETTE_IN_BIT)
-            
-        uart.WritePacketAndEcho(header.PKT_WR_STATUS,header.statusRegister)
-        
-    if kbdChoice == 's':  ## read status register
-        uart.WritePacketAndEcho(header.PKT_WR_STATUS,header.statusRegister)
 
+    if kbdChoice == 'r':  ## reset
+        transport.tapePosition = (32*100)
+        transport.TapeTransportInit()
+ 
     if kbdChoice == 'c':  ## read control register
-        uart.WritePacketAndEcho(header.PKT_RD_CONTROL,0x00)
-        
-    if kbdChoice == 'a':  ## tach +1
-        tachSpeed += 1
-        if(tachSpeed > 255):
-            tachSpeed = 255
-        uart.WritePacketAndEcho(header.PKT_WR_TACH,tachSpeed)
-        print("Tach Speed = %d"%tachSpeed)
-    if kbdChoice == 'b':  ## tach -1
-        tachSpeed -= 1
-        if(tachSpeed < 0):
-            tachSpeed = 0
-        uart.WritePacketAndEcho(header.PKT_WR_TACH,tachSpeed)
-        print("Tach Speed = %d"%tachSpeed)
-    if kbdChoice == 'd':  ## hole 0
-            uart.WritePacketAndEcho(header.PKT_WR_HOLE,(0))
-    if kbdChoice == 'e':  ## hole 8 tachs
-            uart.WritePacketAndEcho(header.PKT_WR_HOLE,(8))
-    if kbdChoice == 'f':  ## hole 16 tachs
-            uart.WritePacketAndEcho(header.PKT_WR_HOLE,(16))
+        uart.WritePacketAndEcho(header.PKT_RD_CONTROL,0x00)        
             
     if kbdChoice == 'z':  ## rewind
             packet.PacketDecoder(0x43,0x16)

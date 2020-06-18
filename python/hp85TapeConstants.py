@@ -27,9 +27,9 @@ HOLE_PAIR_SPACE_IN_LOOPS = int(0.218*LOOPS_PER_INCH) ## 69
 BOT_HOLE_P1_A = (24*LOOPS_PER_INCH)  ## BOT pair 1, hole A
 BOT_HOLE_P1_B = (BOT_HOLE_P1_A + HOLE_PAIR_SPACE_IN_LOOPS) ## BOT pair 1, hole B
 BOT_HOLE_P2_A = (36*LOOPS_PER_INCH)  ## BOT pair 1, hole A
-BOT_HOLE_P2_B = (BOT_HOLE_P1_A + HOLE_PAIR_SPACE_IN_LOOPS) ## BOT pair 2, hole B
+BOT_HOLE_P2_B = (BOT_HOLE_P2_A + HOLE_PAIR_SPACE_IN_LOOPS) ## BOT pair 2, hole B
 BOT_HOLE_P3_A = (48*LOOPS_PER_INCH)  ## BOT pair 1, hole A
-BOT_HOLE_P3_B = (BOT_HOLE_P1_A + HOLE_PAIR_SPACE_IN_LOOPS) ## BOT pair 3, hole B
+BOT_HOLE_P3_B = (BOT_HOLE_P3_A + HOLE_PAIR_SPACE_IN_LOOPS) ## BOT pair 3, hole B
 BOT_HOLE_LOAD_POINT = (72*LOOPS_PER_INCH)
 ##  Holes at the end of the tape
 ##    There are 4 holes at the end of the tape
@@ -40,15 +40,15 @@ EOT_HOLE_C = (TAPE_LENGTH_IN_LOOPS-(48*LOOPS_PER_INCH))
 EOT_HOLE_B = (TAPE_LENGTH_IN_LOOPS-(36*LOOPS_PER_INCH))
 EOT_HOLE_A = (TAPE_LENGTH_IN_LOOPS-(24*LOOPS_PER_INCH))
 
-tapeHoleArray = [[BOT_HOLE_P1_A,BOT_HOLE_P1_A+TAPE_HOLE_WIDTH_IN_LOOPS],\
-                [BOT_HOLE_P1_B,BOT_HOLE_P1_B+TAPE_HOLE_WIDTH_IN_LOOPS],\
-                [BOT_HOLE_P2_A,BOT_HOLE_P2_A+TAPE_HOLE_WIDTH_IN_LOOPS],\
-                [BOT_HOLE_P2_B,BOT_HOLE_P2_B+TAPE_HOLE_WIDTH_IN_LOOPS],\
-                [BOT_HOLE_P3_A,BOT_HOLE_P3_A+TAPE_HOLE_WIDTH_IN_LOOPS],\
-                [BOT_HOLE_P3_B,BOT_HOLE_P3_B+TAPE_HOLE_WIDTH_IN_LOOPS],\
-                [BOT_HOLE_LOAD_POINT,BOT_HOLE_LOAD_POINT+TAPE_HOLE_WIDTH_IN_LOOPS],\
-                [EOT_HOLE_EARLY_WARNING,EOT_HOLE_EARLY_WARNING+TAPE_HOLE_WIDTH_IN_LOOPS],\
-                [EOT_HOLE_C,EOT_HOLE_C+TAPE_HOLE_WIDTH_IN_LOOPS],\
-                [EOT_HOLE_B,EOT_HOLE_B+TAPE_HOLE_WIDTH_IN_LOOPS],\
-                [EOT_HOLE_A,EOT_HOLE_A+TAPE_HOLE_WIDTH_IN_LOOPS]]
+tapeHoleArray = [BOT_HOLE_P1_A,\
+                BOT_HOLE_P1_B,\
+                BOT_HOLE_P2_A,\
+                BOT_HOLE_P2_B,\
+                BOT_HOLE_P3_A,\
+                BOT_HOLE_P3_B,\
+                BOT_HOLE_LOAD_POINT,\
+                EOT_HOLE_EARLY_WARNING,\
+                EOT_HOLE_C,\
+                EOT_HOLE_B,\
+                EOT_HOLE_A]
 tapeHoleArraySize = 11

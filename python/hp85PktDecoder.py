@@ -13,7 +13,7 @@ import hp85PktDecoder as packet
 import hp85Transport as transport
 
 def PrintControlRegister(value):
-    prtLine = "Control reg=0x%02x "%value
+    prtLine = "\nControl reg=0x%02x "%value
     if(utility.testRegBit(value,header.CONTROL_TRACK_NO_BIT)):
        prtLine = prtLine + "TRACK_NO "
     if(utility.testRegBit(value,header.CONTROL_POWER_UP_BIT)):
@@ -71,7 +71,7 @@ def PacketDecoder(cmnd,value):
 
     if cmnd == header.PKT_RD_CONTROL:
         header.controlRegister = value
-        PrintControlRegister(value)
+        ## PrintControlRegister(value)
         
         ##  These constants were found in the HP-85's rom
         ##  values sent to the command register
@@ -84,28 +84,28 @@ def PacketDecoder(cmnd,value):
         ##  0xC2 = 302    In rewind routine "find 2 holes"
         ##  0x15 = 025
         ##  0x10 = 020
-
-        temp = (value & 0b00011110) ## mask only the motor control bits
         
-        if(temp==0x00): ## (
+        if((value==0x00)or(value==0x02)): ## (
             transport.TapeTransportSetState(header.TRANSPORT_STATE_OFF,value)
-        elif(temp==0x0E): ## (CONTROL_POWER_UP_BIT | CONTROL_MOTOR_ON_BIT | CONTROL_DIR_FWD_BIT)
+        elif(value==0x0E): ## (CONTROL_POWER_UP_BIT | CONTROL_MOTOR_ON_BIT | CONTROL_DIR_FWD_BIT)
             transport.TapeTransportSetState(header.TRANSPORT_STATE_FWD_SLOW,value)
-        elif(temp==0x1E): ## (CONTROL_POWER_UP_BIT | CONTROL_MOTOR_ON_BIT |CONTROL_FAST_BIT)
+        elif(value==0x1E): ## (CONTROL_POWER_UP_BIT | CONTROL_MOTOR_ON_BIT |CONTROL_FAST_BIT)
             transport.TapeTransportSetState(header.TRANSPORT_STATE_FWD_FAST,value)
-        if(temp==0x06): ## (CONTROL_POWER_UP_BIT | CONTROL_MOTOR_ON_BIT | (CONTROL_DIR_FWD_BIT))
+        elif(value==0x06): ## (CONTROL_POWER_UP_BIT | CONTROL_MOTOR_ON_BIT | (CONTROL_DIR_FWD_BIT))
             transport.TapeTransportSetState(header.TRANSPORT_STATE_RWD_SLOW,value)
-        elif(temp==0x16): ## (CONTROL_POWER_UP_BIT | CONTROL_MOTOR_ON_BIT |CONTROL_FAST_BIT)
+        elif(value==0x16): ## (CONTROL_POWER_UP_BIT | CONTROL_MOTOR_ON_BIT |CONTROL_FAST_BIT)
             transport.TapeTransportSetState(header.TRANSPORT_STATE_RWD_FAST,value)
+        elif(value==0xC2): ## (
+            transport.TapeTransportSetState(header.TRANSPORT_STATE_SLOW_2HOLE,value)
 
         retValue = 1
     elif cmnd == header.PKT_RD_STATUS:
- ##       header.statusRegister = value
- ##       PrintStatusRegister(value)
+        header.statusRegister = value
+        PrintStatusRegister(value)
         retValue = 1
     elif cmnd == header.PKT_RD_TACH:
         header.tachometer = value
-        print("Tachometer set to %d"%value)
+        print("\nTachometer set to %d"%value)
         retValue = 1
         
     return(retValue)
